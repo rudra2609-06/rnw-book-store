@@ -1,8 +1,12 @@
+import { validationResult } from "express-validator";
 import BookModel from "../models/book.model.js";
 
 export const createBook = async (req, res) => {
   try {
-    console.log(req.body);
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
     req.body = { ...req.body, coverPage: req.file?.path };
     const book = await BookModel.create(req.body);
     return res
@@ -27,10 +31,23 @@ export const createBook = async (req, res) => {
 
 export const getBooks = async (req, res) => {
   try {
-    const books = await BookModel.find({});
+    const searchParams = req.query.search || "";
+    const limit = req.query.limit || 5;
+    const page = req.query.page || 1;
+    const skipformula = (page - 1) * limit;
+    const books = await BookModel.find({
+      title: { $regex: searchParams, $options: "i" },
+    })
+      .sort({ title: -1 })
+      .skip(skipformula)
+      .limit(limit);
+
     return res
       .status(200)
-      .json({ message: "Successfully Fetched Books", data: books });
+      .json({
+        message: "Successfully Fetched Books",
+        data: { books, limit, page },
+      });
   } catch (error) {
     console.log(error.message);
     return res
@@ -39,64 +56,4 @@ export const getBooks = async (req, res) => {
   }
 };
 
-export const getBookById = async (req, res) => {
-  try {
-    const { id } = req.params;
-    if (!id) {
-      return res.status(400).json({ message: "Required Book Id" });
-    }
-    const bookById = await BookModel.findById(id).select(
-      "-createdAt -updatedAt"
-    );
-    return res
-      .status(200)
-      .json({ message: "Book Found Successfully", data: bookById });
-  } catch (error) {
-    return res
-      .status(error.status || 500)
-      .json({ message: error.message || "Internal Server Error" });
-  }
-};
 
-export const editBookById = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const dataToUpdate = req.body;
-    if (!id) {
-      return res.status(400).json({ message: "Required Book Id" });
-    }
-    const updatedBook = await BookModel.findByIdAndUpdate(
-      id,
-      {
-        $set: dataToUpdate,
-      },
-      { after: true }
-    );
-    return res
-      .status(200)
-      .json({ message: "Book Updated Successfully", data: updatedBook });
-  } catch (error) {
-    return res
-      .status(error.status || 500)
-      .json({ message: error.message || "Internal Server Error" });
-  }
-};
-
-export const deleteBooks = async (req, res) => {
-  try {
-    const { id } = req.params;
-    if (!id) {
-      return res.status(400).json({ message: "Required Book Id" });
-    }
-    const bookDeleted = await BookModel.findByIdAndDelete(id).select(
-      "-createdAt -updatedAt"
-    );
-    return res
-      .status(200)
-      .json({ message: "Book Deleted Successfully", data: bookDeleted });
-  } catch (error) {
-    return res
-      .status(error.status || 500)
-      .json({ message: error.message || "Internal Server Error" });
-  }
-};

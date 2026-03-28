@@ -1,23 +1,12 @@
 import express from "express";
-import {
-  createBook,
-  getBooks,
-  deleteBooks,
-  getBookById,
-  editBookById,
-} from "../controllers/book.controller.js";
+import { createBook, getBooks } from "../controllers/book.controller.js";
 import { uploadFile } from "../middlewares/uploads.js";
+import { bookValidator } from "../validator/bookModel.validator.js";
 
 const router = express.Router();
 
-router.post("/create", uploadFile, createBook);
+router.post("/create", uploadFile, bookValidator, createBook);
 
 router.get("/get", getBooks);
-
-router.get("/getBookById/:id", getBookById);
-
-router.patch("/editBookById/:id", uploadFile, editBookById);
-
-router.delete("/delete/:id", deleteBooks);
 
 export default router;
